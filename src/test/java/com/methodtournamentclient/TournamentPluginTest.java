@@ -1,4 +1,4 @@
-package com.example;
+package com.methodtournamentclient;
 
 import com.methodtournamentclient.TournamentPlugin;
 import net.runelite.client.RuneLite;
