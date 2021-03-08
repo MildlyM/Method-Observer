@@ -14,7 +14,6 @@ import net.runelite.client.events.ConfigChanged;
 import net.runelite.client.game.ItemManager;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
-import net.runelite.client.ui.overlay.OverlayManager;
 import okhttp3.*;
 import org.apache.commons.lang3.time.StopWatch;
 
@@ -190,9 +189,9 @@ public class TournamentPlugin extends Plugin
 
         Player local = client.getLocalPlayer();
 
-        if (event.getActor().equals(opponent)) {
+        if (event.getActor().equals(local)) {
             if (MELEE_ATTACKS.contains(event.getActor().getAnimation())) {
-                if (local.getOverheadIcon() != null && local.getOverheadIcon().equals(HeadIcon.MELEE)) {
+                if (opponent.getOverheadIcon() != null && opponent.getOverheadIcon().equals(HeadIcon.MELEE)) {
                     onPrayHits++;
                 } else {
                     offPrayHits++;
@@ -200,7 +199,7 @@ public class TournamentPlugin extends Plugin
             }
 
             if (RANGE_ATTACKS.contains(event.getActor().getAnimation())) {
-                if (local.getOverheadIcon() != null && local.getOverheadIcon().equals(HeadIcon.RANGED)) {
+                if (opponent.getOverheadIcon() != null && opponent.getOverheadIcon().equals(HeadIcon.RANGED)) {
                     onPrayHits++;
                 } else {
                     offPrayHits++;
@@ -208,7 +207,7 @@ public class TournamentPlugin extends Plugin
             }
 
             if (MAGE_ATTACKS.contains(event.getActor().getAnimation())) {
-                if (local.getOverheadIcon() != null && local.getOverheadIcon().equals(HeadIcon.MAGIC)) {
+                if (opponent.getOverheadIcon() != null && opponent.getOverheadIcon().equals(HeadIcon.MAGIC)) {
                     onPrayHits++;
                 } else {
                     offPrayHits++;
@@ -361,14 +360,14 @@ public class TournamentPlugin extends Plugin
 
     private String getPrayPercent()
     {
-        double result = (double) onPrayHits / getTotalHits() * 100;
+        double result = (double) offPrayHits / getTotalHits() * 100;
         int toPrint = (int) result;
         return toPrint + "%";
     }
 
     private String getPrayers()
     {
-        String output = onPrayHits + " / " + getTotalHits() + "(" + getPrayPercent() + ")";
+        String output = offPrayHits + " / " + getTotalHits() + "(" + getPrayPercent() + ")";
         return output;
     }
 
