@@ -6,7 +6,6 @@ import com.google.inject.Provides;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.*;
 import net.runelite.api.coords.WorldArea;
-import net.runelite.api.coords.WorldPoint;
 import net.runelite.api.events.*;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.config.ConfigManager;
@@ -22,6 +21,7 @@ import org.apache.commons.lang3.time.StopWatch;
 import javax.inject.Inject;
 import java.io.IOException;
 
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -44,8 +44,6 @@ public class TournamentPlugin extends Plugin
     private TournamentConfig config;
     @Inject
     private ItemManager itemManager;
-    @Inject
-    private OverlayManager overlayManager;
 
     private OkHttpClient okClient = new OkHttpClient();
     private Player opponent;
@@ -172,9 +170,12 @@ public class TournamentPlugin extends Plugin
         {
             captureInvent();
 
-            if (config.enable() && !client.getLocalPlayer().getWorldArea().intersectsWith(DUEL_ARENA))
+            if (isValidUrl(config.endpoint()))
             {
-                sendPostRequest(inventSend, client.getLocalPlayer().getName(), false);
+                if (config.enable() && !client.getLocalPlayer().getWorldArea().intersectsWith(DUEL_ARENA))
+                {
+                    sendPostRequest(inventSend, client.getLocalPlayer().getName(), false);
+                }
             }
         }
     }
@@ -313,24 +314,6 @@ public class TournamentPlugin extends Plugin
             }
         }
     }
-
-    @Subscribe
-    public void onActorDeath(ActorDeath event)
-    {
-        if (event.getActor().equals(client.getLocalPlayer()) || event.getActor().equals(opponent))
-        {
-//            resetValues();
-//            sendPostRequest(inventSend, client.getLocalPlayer().getName(), false);
-//
-//            if (config.debug())
-//            {
-//                clientThread.invokeLater(() ->
-//                {
-//                    client.addChatMessage(ChatMessageType.ENGINE, "", "Opponent reset " + opponent.getName(), "");
-//                });
-//            }
-        }
-    }
     
     public void resetValues()
     {
@@ -444,8 +427,37 @@ public class TournamentPlugin extends Plugin
         {
             clientThread.invokeLater(() ->
             {
-                client.addChatMessage(ChatMessageType.ENGINE, "", "Local Player null, cancelling test", "");
+                client.addChatMessage(ChatMessageType.ENGINE, "", "Test: Local Player null, cancelling test", "");
             });
+        }
+
+        badResponses = 0;
+
+        if (config.endpoint().equals(""))
+        {
+            clientThread.invokeLater(() ->
+            {
+                client.addChatMessage(ChatMessageType.ENGINE, "", "Test: Endpoint empty, please enter the endpoint provided to you, in the config", "");
+            });
+            return;
+        }
+
+        if (config.password().equals(""))
+        {
+            clientThread.invokeLater(() ->
+            {
+                client.addChatMessage(ChatMessageType.ENGINE, "", "Test: Password empty, please enter the tournament password provided to you, in the config", "");
+            });
+            return;
+        }
+
+        if (!isValidUrl(config.endpoint()))
+        {
+            clientThread.invokeLater(() ->
+            {
+                client.addChatMessage(ChatMessageType.ENGINE, "", "Test: Endpoint is not a valid URL", "");
+            });
+            return;
         }
 
         if (client.getLocalPlayer().getName() != null)
@@ -476,7 +488,6 @@ public class TournamentPlugin extends Plugin
 
         MediaType JSON = MediaType.parse("application/json; charset=utf-8");
 
-        log.info(jsonObject.toString());
         RequestBody body = RequestBody.create(JSON, jsonObject.toString());
 
         Request request = new Request.Builder()
@@ -538,6 +549,16 @@ public class TournamentPlugin extends Plugin
             return;
         }
 
+        if (content.contains("Internal server error"))
+        {
+            if (config.debug())
+            {
+                log.info(time + "ms - Bad response, internal server error");
+                badResponses ++;
+            }
+            return;
+        }
+
         if (content.equals("UNKNOWN_PLAYER"))
         {
             if (config.debug())
@@ -566,7 +587,10 @@ public class TournamentPlugin extends Plugin
             }
         }
 
-        log.info(time +"ms -Exception, seek help");
+        if (config.debug())
+        {
+            log.info(time +"ms -Exception, seek help");
+        }
     }
 
     private void handleTestResponse(Response response) throws IOException
@@ -588,25 +612,45 @@ public class TournamentPlugin extends Plugin
             output += (time +"ms -FAILURE: Http response body empty");
         }
 
-        if (content.equals("NO_CHANGE"))
+        if (content != null)
         {
-            output += (time +"ms -FAILURE: No database change, ");
-        }
+            if (content.contains("Internal server error"))
+            {
+                output += (time + "ms - FAILURE: Internal server error");
+            }
 
-        if (content.equals("UNAUTHORISED"))
-        {
-            output += (time +"ms -FAILURE: Invalid Password");
-        }
+            if (content.equals("NO_CHANGE"))
+            {
+                output += (time +"ms -FAILURE: No database change, ");
+            }
 
-        if (content.equals("UPDATE_SUCCESS"))
-        {
-            output += (time +"ms -SUCCESS: Connection completed with good response from server");
+            if (content.equals("UNAUTHORISED"))
+            {
+                output += (time +"ms -FAILURE: Invalid Password");
+            }
+
+            if (content.equals("UPDATE_SUCCESS"))
+            {
+                output += (time +"ms -SUCCESS: Connection completed with good response from server");
+            }
         }
 
         String finalOutput = output;
         clientThread.invokeLater(() ->
         {
-            client.addChatMessage(ChatMessageType.ENGINE, "", finalOutput, "");
+            client.addChatMessage(ChatMessageType.ENGINE, "", "Test: " + finalOutput, "");
         });
+    }
+
+    public static boolean isValidUrl(String url)
+    {
+        try {
+            new URL(url).toURI();
+            return true;
+        }
+
+        catch (Exception e) {
+            return false;
+        }
     }
 }
