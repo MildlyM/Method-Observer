@@ -182,38 +182,41 @@ public class TournamentPlugin extends Plugin
     @Subscribe
     public void onAnimationChanged(AnimationChanged event)
     {
-        if (client.getLocalPlayer() == null || opponent == null)
+        clientThread.invokeLater(() ->
         {
-            return;
-        }
-
-        Player local = client.getLocalPlayer();
-
-        if (event.getActor().equals(local)) {
-            if (MELEE_ATTACKS.contains(event.getActor().getAnimation())) {
-                if (opponent.getOverheadIcon() != null && opponent.getOverheadIcon().equals(HeadIcon.MELEE)) {
-                    onPrayHits++;
-                } else {
-                    offPrayHits++;
-                }
+            if (client.getLocalPlayer() == null || opponent == null)
+            {
+                return;
             }
 
-            if (RANGE_ATTACKS.contains(event.getActor().getAnimation())) {
-                if (opponent.getOverheadIcon() != null && opponent.getOverheadIcon().equals(HeadIcon.RANGED)) {
-                    onPrayHits++;
-                } else {
-                    offPrayHits++;
-                }
-            }
+            Player local = client.getLocalPlayer();
 
-            if (MAGE_ATTACKS.contains(event.getActor().getAnimation())) {
-                if (opponent.getOverheadIcon() != null && opponent.getOverheadIcon().equals(HeadIcon.MAGIC)) {
-                    onPrayHits++;
-                } else {
-                    offPrayHits++;
+            if (event.getActor().equals(local)) {
+                if (MELEE_ATTACKS.contains(event.getActor().getAnimation())) {
+                    if (opponent.getOverheadIcon() != null && opponent.getOverheadIcon().equals(HeadIcon.MELEE)) {
+                        onPrayHits++;
+                    } else {
+                        offPrayHits++;
+                    }
+                }
+
+                if (RANGE_ATTACKS.contains(event.getActor().getAnimation())) {
+                    if (opponent.getOverheadIcon() != null && opponent.getOverheadIcon().equals(HeadIcon.RANGED)) {
+                        onPrayHits++;
+                    } else {
+                        offPrayHits++;
+                    }
+                }
+
+                if (MAGE_ATTACKS.contains(event.getActor().getAnimation())) {
+                    if (opponent.getOverheadIcon() != null && opponent.getOverheadIcon().equals(HeadIcon.MAGIC)) {
+                        onPrayHits++;
+                    } else {
+                        offPrayHits++;
+                    }
                 }
             }
-        }
+        });
     }
 
     @Subscribe
